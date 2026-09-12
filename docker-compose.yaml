@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: trackshift-backend:latest
+    container_name: trackshift-backend
+    environment:
+      # Origins allowed to call the API directly (bypassing the nginx proxy).
+      # The nginx proxy itself talks to the backend over the internal Docker
+      # network, so it is unaffected by this setting.
+      - CORS_ORIGINS=*
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/demo', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: trackshift-frontend:latest
+    container_name: trackshift-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
